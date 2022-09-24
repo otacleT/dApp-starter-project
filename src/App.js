@@ -1,9 +1,20 @@
 // App.js
 import React, { useEffect, useState } from "react";
 import "./App.css";
+import { ethers } from "ethers";
+/* ABIファイルを含むWavePortal.jsonファイルをインポートする*/
+import abi from "./utils/WavePortal.json";
 const App = () => {
   /* ユーザーのパブリックウォレットを保存するために使用する状態変数を定義します */
   const [currentAccount, setCurrentAccount] = useState("");
+  /*
+   * デプロイされたコントラクトのアドレスを保持する変数を作成
+   */
+  const contractAddress = "0x475eb1c1ee900cc4fb72e648ae579f05b1d70078";
+  /*
+   * ABIの内容を参照する変数を作成
+   */
+  const contractABI = abi.abi;
   console.log("currentAccount: ", currentAccount);
   /* window.ethereumにアクセスできることを確認します */
   const checkIfWalletIsConnected = async () => {
@@ -45,6 +56,38 @@ const App = () => {
       console.log(error);
     }
   };
+  // waveの回数をカウントする関数を実装
+  const wave = async () => {
+    try {
+      const { ethereum } = window;
+      if (ethereum) {
+        const provider = new ethers.providers.Web3Provider(ethereum);
+        const signer = provider.getSigner();
+        const wavePortalContract = new ethers.Contract(
+          contractAddress,
+          contractABI,
+          signer
+        );
+        let count = await wavePortalContract.getTotalWaves();
+        console.log("Retrieved total wave count...", count.toNumber());
+        console.log("Signer:", signer);
+        /*
+         * コントラクトに👋（wave）を書き込む。ここから...
+         */
+        const waveTxn = await wavePortalContract.wave();
+        console.log("Mining...", waveTxn.hash);
+        await waveTxn.wait();
+        console.log("Mined -- ", waveTxn.hash);
+        count = await wavePortalContract.getTotalWaves();
+        console.log("Retrieved total wave count...", count.toNumber());
+        /*-- ここまで --*/
+      } else {
+        console.log("Ethereum object doesn't exist!");
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
   /* WEBページがロードされたときに下記の関数を実行します */
   useEffect(() => {
     checkIfWalletIsConnected();
@@ -68,7 +111,8 @@ const App = () => {
             ✨
           </span>
         </div>
-        <button className="waveButton" onClick={null}>
+        {/* waveボタンにwave関数を連動させる。*/}
+        <button className="waveButton" onClick={wave}>
           Wave at Me
         </button>
         {/* ウォレットコネクトのボタンを実装 */}
